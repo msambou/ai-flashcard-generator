@@ -1,24 +1,18 @@
 import os
-import sys
-from pathlib import Path
+import json
+import logging
+from typing import List, Dict, Any
 
-# Add backend to Python path
-backend_path = Path(__file__).parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
-    from typing import List
     import openai
-    import json
-    import logging
     from mangum import Mangum
-    
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
     
     # Create FastAPI app
     app = FastAPI(title="AI Flashcard Generator API")
@@ -48,7 +42,7 @@ try:
     async def root():
         return {"message": "AI Flashcard Generator API", "status": "running"}
     
-    @app.get("/api/health")
+    @app.get("/health")
     async def health_check():
         api_key = os.getenv("OPENAI_API_KEY")
         return {
@@ -56,7 +50,7 @@ try:
             "openai_configured": bool(api_key)
         }
     
-    @app.post("/api/generate-flashcards")
+    @app.post("/generate-flashcards")
     async def generate_flashcards(input_data: TextInput):
         try:
             api_key = os.getenv("OPENAI_API_KEY")
@@ -123,13 +117,39 @@ try:
             raise HTTPException(status_code=500, detail=f"Failed to generate flashcards: {str(e)}")
     
     handler = Mangum(app)
+    
+except ImportError as e:
+    logger.error(f"Import error: {str(e)}")
+    from mangum import Mangum
+    
+    async def fallback_app(scope, receive, send):
+        if scope["type"] == "http":
+            await send({
+                "type": "http.response.start",
+                "status": 500,
+                "headers": [[b"content-type", b"application/json"]],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": json.dumps({"error": "API initialization failed", "details": str(e)}).encode(),
+            })
+    
+    handler = Mangum(fallback_app)
 
 except Exception as e:
-    # Fallback handler if imports fail
-    logger.error(f"Failed to initialize app: {str(e)}")
+    logger.error(f"Unexpected error: {str(e)}")
+    from mangum import Mangum
     
-    def handler(event, context):
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Failed to initialize API", "details": str(e)})
-        }
+    async def error_app(scope, receive, send):
+        if scope["type"] == "http":
+            await send({
+                "type": "http.response.start",
+                "status": 500,
+                "headers": [[b"content-type", b"application/json"]],
+            })
+            await send({
+                "type": "http.response.body",
+                "body": json.dumps({"error": "Unexpected initialization error", "details": str(e)}).encode(),
+            })
+    
+    handler = Mangum(error_app)
