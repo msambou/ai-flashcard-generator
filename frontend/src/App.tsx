@@ -6,6 +6,7 @@ import { TextInput } from "./components/TextInput"
 import { FlashcardDisplay } from "./components/FlashcardDisplay"
 import { LoadingState } from "./components/LoadingState"
 import { ErrorMessage } from "./components/ErrorMessage"
+import { generateFlashcards } from "./services/api"
 import type { Flashcard } from "./types"
 
 function App() {
@@ -14,34 +15,40 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [hasGenerated, setHasGenerated] = useState(false)
 
+  const isApiConfigured = true
+
   const handleGenerateFlashcards = async (text: string) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // For demo purposes, create mock flashcards since we can't connect to the actual backend
-      const mockFlashcards: Flashcard[] = [
-        {
-          question: "What is the main topic of this content?",
-          answer:
-            "The content discusses key concepts and important information that can be studied through flashcards.",
-        },
-        {
-          question: "How can flashcards improve learning?",
-          answer:
-            "Flashcards use active recall and spaced repetition to help strengthen memory and improve retention of information.",
-        },
-        {
-          question: "What makes AI-generated flashcards effective?",
-          answer:
-            "AI can analyze content to identify key concepts, create varied question types, and ensure comprehensive coverage of the material.",
-        },
-      ]
+      if (isApiConfigured) {
+        const response = await generateFlashcards(text)
+        setFlashcards(response.flashcards)
+      } else {
+        const mockFlashcards: Flashcard[] = [
+          {
+            question: "What is the main topic of this content?",
+            answer:
+              "The content discusses key concepts and important information that can be studied through flashcards.",
+          },
+          {
+            question: "How can flashcards improve learning?",
+            answer:
+              "Flashcards use active recall and spaced repetition to help strengthen memory and improve retention of information.",
+          },
+          {
+            question: "What makes AI-generated flashcards effective?",
+            answer:
+              "AI can analyze content to identify key concepts, create varied question types, and ensure comprehensive coverage of the material.",
+          },
+        ]
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+        // Simulate API delay for demo
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        setFlashcards(mockFlashcards)
+      }
 
-      setFlashcards(mockFlashcards)
       setHasGenerated(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate flashcards")
@@ -68,12 +75,23 @@ function App() {
             <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
               Create AI-Powered Study Cards Effortlessly. Upload your text and let our AI craft the perfect study cards.
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-              <p className="text-sm text-blue-800">
-                <strong>Demo Mode:</strong> This is a demonstration of the flashcard interface. In the full application,
-                your text would be processed by OpenAI to generate personalized flashcards.
-              </p>
-            </div>
+            {!isApiConfigured && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
+                <p className="text-sm text-blue-800">
+                  <strong>Demo Mode:</strong> This is a demonstration of the flashcard interface. To use real AI
+                  generation, set the NEXT_PUBLIC_API_URL environment variable in Project Settings and ensure your
+                  backend is running.
+                </p>
+              </div>
+            )}
+            {isApiConfigured && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl mx-auto">
+                <p className="text-sm text-green-800">
+                  <strong>AI Mode:</strong> Connected to backend API. Your text will be processed by OpenAI to generate
+                  personalized flashcards.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
