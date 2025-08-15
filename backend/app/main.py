@@ -5,7 +5,7 @@ import logging
 import os
 from dotenv import load_dotenv
 
-from .models import TextInput, FlashcardResponse
+from .models import TextInput, FlashcardResponse, ErrorResponse
 from .services.flashcard_service import FlashcardService
 from .services.openai_service import OpenAIService
 from .config import settings
@@ -20,7 +20,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
 app = FastAPI(
     title=settings.api_title,
     description=settings.api_description,
@@ -36,19 +35,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency to get OpenAI service
+# Initialize services
 def get_openai_service():
     api_key = settings.openai_api_key
     if not api_key:
         logger.error("OpenAI API key not configured")
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured.")
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.")
     return OpenAIService(api_key)
 
-# Dependency to get Flashcard service
 def get_flashcard_service(openai_service: OpenAIService = Depends(get_openai_service)):
     return FlashcardService(openai_service)
 
-# Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     logger.error(f"Global exception: {str(exc)}")
@@ -57,7 +54,6 @@ async def global_exception_handler(request, exc):
         content={"detail": "Internal server error occurred"}
     )
 
-# Root endpoint
 @app.get("/")
 async def root():
     return {
@@ -66,41 +62,60 @@ async def root():
         "docs": "/docs"
     }
 
-# Health check endpoint
 @app.get("/health")
 async def health_check():
-    api_key = settings.openai_api_key
-    return {
-        "status": "healthy" if api_key else "unhealthy",
-        "openai_configured": bool(api_key)
-    }
+    """Health check endpoint"""
+    try:
+        # Check if OpenAI API key is configured
+        api_key = settings.openai_api_key
+        if not api_key:
+            return {"status": "unhealthy", "reason": "OpenAI API key not configured"}
+        
+        return {
+            "status": "healthy", 
+            "version": settings.api_version,
+            "openai_configured": bool(api_key)
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {"status": "unhealthy", "reason": str(e)}
 
-# Generate flashcards endpoint
 @app.post("/generate-flashcards", response_model=FlashcardResponse)
 async def generate_flashcards(
     input_data: TextInput,
     flashcard_service: FlashcardService = Depends(get_flashcard_service)
 ):
-    if not input_data.text.strip():
-        raise HTTPException(status_code=400, detail="Text input cannot be empty")
-
-    if len(input_data.text) > 10000:
-        raise HTTPException(status_code=400, detail="Text input too long (max 10,000 characters)")
-
+    """Generate flashcards from input text using AI"""
     try:
+        logger.info(f"Generating flashcards for text of length: {len(input_data.text)}")
+        
+        # Validate input
+        if not input_data.text.strip():
+            raise HTTPException(status_code=400, detail="Text input cannot be empty")
+        
+        if len(input_data.text) > 10000:
+            raise HTTPException(status_code=400, detail="Text input too long (max 10,000 characters)")
+        
+        # Generate flashcards
         flashcards = await flashcard_service.generate_flashcards(input_data.text)
-        logger.info(f"Generated {len(flashcards)} flashcards")
+        
+        logger.info(f"Successfully generated {len(flashcards)} flashcards")
         return FlashcardResponse(flashcards=flashcards, total_count=len(flashcards))
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error generating flashcards: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate flashcards. Please try again.")
 
-# Only used for local development
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "app.main:app",
-        host=settings.host,
-        port=settings.port,
+        "app.main:app", 
+        host=settings.host, 
+        port=settings.port, 
         reload=settings.reload
     )
