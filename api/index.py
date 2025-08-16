@@ -125,5 +125,5 @@ async def generate_flashcards(input_data: TextInput):
         logger.error(f"Error generating flashcards: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate flashcards: {str(e)}")
 
-# handler = app
-    
+
+    # comm
