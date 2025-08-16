@@ -82,6 +82,6 @@ async def generate_flashcards(
         raise HTTPException(status_code=500, detail="Failed to generate flashcards. Please try again.")
 
 # Only for local development
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=settings.reload)
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run("app.main:app", host=settings.host, port=settings.port, reload=settings.reload)
