@@ -36,16 +36,16 @@ app.add_middleware(
 )
 
 # Models
-# class TextInput(BaseModel):
-#     text: str
+class TextInput(BaseModel):
+    text: str
 
-# class Flashcard(BaseModel):
-#     question: str
-#     answer: str
+class Flashcard(BaseModel):
+    question: str
+    answer: str
 
-# class FlashcardResponse(BaseModel):
-#     flashcards: List[Flashcard]
-#     total_count: int
+class FlashcardResponse(BaseModel):
+    flashcards: List[Flashcard]
+    total_count: int
 
 @app.get("/")
 async def root():
