@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/api/")
+@app.get("/")
 async def root():
     return {"message": "AI Flashcard Generator API", "status": "running"}
 
