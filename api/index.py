@@ -5,6 +5,8 @@ from typing import List, Dict, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +23,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware to strip /api
+@app.middleware("http")
+async def strip_api_prefix(request, call_next):
+    if request.url.path.startswith("/api"):
+        request.scope["path"] = request.url.path[4:] or "/"
+    return await call_next(request)
+
 
 @app.get("/")
 async def root():
