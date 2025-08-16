@@ -1,11 +1,13 @@
 import axios from "axios"
 import type { FlashcardResponse } from "../types"
 
+
 // Handle environment variable safely
 const getApiUrl = () => {
   if (typeof window !== "undefined") {
     // Client-side
-    return (window as any).process?.env?.VITE_API_URL || "http://localhost:8000"
+    // return (window as any).process?.env?.VITE_API_URL || "http://localhost:8000"
+    return import.meta.env.VITE_API_URL || "http://localhost:8000"
   }
   // Server-side or fallback
   return "http://localhost:8000"
