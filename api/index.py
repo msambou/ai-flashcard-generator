@@ -51,13 +51,13 @@ class FlashcardResponse(BaseModel):
 async def root():
     return {"message": "AI Flashcard Generator API", "status": "running"}
 
-# @app.get("/health")
-# async def health_check():
-#     api_key = os.getenv("OPENAI_API_KEY")
-#     return {
-#         "status": "healthy" if api_key else "unhealthy",
-#         "openai_configured": bool(api_key)
-#     }
+@app.get("/health")
+async def health_check():
+    api_key = os.getenv("OPENAI_API_KEY")
+    return {
+        "status": "healthy" if api_key else "unhealthy",
+        "openai_configured": bool(api_key)
+    }
 
 # @app.post("/generate-flashcards")
 # async def generate_flashcards(input_data: TextInput):
